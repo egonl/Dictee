@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import './App.css'
 import celebrationGif from './assets/thumbs-up.gif'
 
+// Basisset woorden voor dit eerste dictee-thema.
 const WATERWEGEN = [
   'Waddenzee',
   'IJsselmeer',
@@ -39,6 +40,7 @@ const pickWeightedWord = (
   options: string[],
   mistakeCount: Record<string, number>,
 ) => {
+  // Woorden met meer fouten krijgen hogere kans om terug te komen.
   const weights = options.map((word) => 1 + (mistakeCount[word] ?? 0) * 3)
   const totalWeight = weights.reduce((sum, value) => sum + value, 0)
 
@@ -65,6 +67,7 @@ const charLabel = (char: string) => {
 }
 
 const buildFeedback = (answer: string, target: string): LetterFeedback[] => {
+  // Vergelijk letter-voor-letter zodat de UI precies kan tonen wat goed/fout/mist/extra is.
   const cleanedAnswer = answer.trim()
   const answerChars = [...cleanedAnswer]
   const targetChars = [...target]
@@ -102,6 +105,7 @@ const buildFeedback = (answer: string, target: string): LetterFeedback[] => {
 }
 
 const pickDutchFemaleVoice = (voices: SpeechSynthesisVoice[]) => {
+  // Browservoices verschillen per OS/browser. We scoren op NL + naam-hints.
   const dutchVoices = voices.filter((voice) =>
     voice.lang.toLocaleLowerCase().startsWith('nl'),
   )
@@ -146,6 +150,7 @@ const pickDutchFemaleVoice = (voices: SpeechSynthesisVoice[]) => {
 
 function App() {
   const answerInputRef = useRef<HTMLInputElement>(null)
+  // Game state.
   const [round, setRound] = useState(1)
   const [questionNumber, setQuestionNumber] = useState(0)
   const [currentWord, setCurrentWord] = useState<string | null>(null)
@@ -164,6 +169,7 @@ function App() {
   const speechSupported =
     typeof window !== 'undefined' && 'speechSynthesis' in window
 
+  // Totaalpercentage over alle gespeelde vragen.
   const accuracy = useMemo(() => {
     if (totalQuestions === 0) {
       return 0
@@ -175,6 +181,7 @@ function App() {
     nextAsked: string[],
     mistakesSnapshot: Record<string, number>,
   ) => {
+    // Binnen 1 ronde tonen we een woord maximaal 1 keer.
     const excluded = new Set(nextAsked)
     const options = WATERWEGEN.filter((word) => !excluded.has(word))
 
@@ -204,6 +211,7 @@ function App() {
     utterance.onend = () => setIsSpeaking(false)
     utterance.onerror = () => setIsSpeaking(false)
 
+    // Stop eventuele vorige utterance zodat herhaal-knoppen niet overlappen.
     window.speechSynthesis.cancel()
     window.speechSynthesis.speak(utterance)
   }
@@ -258,6 +266,7 @@ function App() {
     setLastCorrectWord(currentWord)
     setTotalQuestions((previous) => previous + 1)
 
+    // Snapshot wordt meteen gebruikt voor de volgende gewogen selectie.
     let nextMistakeCount = mistakeCount
 
     if (correct) {
@@ -277,6 +286,7 @@ function App() {
     setMistakeCount(nextMistakeCount)
 
     if (questionNumber >= QUESTIONS_PER_ROUND) {
+      // Einde ronde: geen nieuw woord meer klaarzetten.
       setQuestionNumber(QUESTIONS_PER_ROUND)
       setCurrentWord(null)
       setAnswer('')
@@ -307,6 +317,7 @@ function App() {
 
   const roundFinished = questionNumber === QUESTIONS_PER_ROUND && currentWord === null
 
+  // Houd focus op het invoerveld tijdens actief dictee.
   useEffect(() => {
     if (currentWord) {
       answerInputRef.current?.focus()
