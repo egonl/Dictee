@@ -247,6 +247,30 @@ strong {
   padding: 18px;
   border-radius: 16px;
   background: linear-gradient(180deg, #dffff2 0%, #f2fff9 100%);
+  border: 2px dashed #7ecf9f;
+}
+
+.celebration-gif {
+  width: min(300px, 100%);
+  border-radius: 16px;
+  display: block;
+  margin: 0 auto 8px;
+  box-shadow: 0 10px 24px rgba(7, 59, 95, 0.2);
+}
+
+.mascot-text {
+  margin: 8px 0 0;
+  font-weight: 800;
+  color: #0f5b82;
+  font-size: 1.1rem;
+}
+
+.round-end-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 10px 0;
 }
 
 @keyframes float {
@@ -258,6 +282,7 @@ strong {
     transform: translateY(-14px);
   }
 }
+
 
 @media (max-width: 720px) {
   .card {

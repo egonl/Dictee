@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
+import celebrationGif from './assets/thumbs-up.gif'
 
 const WATERWEGEN = [
   'Waddenzee',
@@ -207,6 +208,26 @@ function App() {
     window.speechSynthesis.speak(utterance)
   }
 
+  const speakCelebration = () => {
+    if (!speechSupported) {
+      return
+    }
+
+    const utterance = new SpeechSynthesisUtterance('Goed gedaan!')
+    const dutchVoice = pickDutchFemaleVoice(window.speechSynthesis.getVoices())
+
+    if (dutchVoice) {
+      utterance.voice = dutchVoice
+    }
+
+    utterance.lang = dutchVoice?.lang ?? 'nl-NL'
+    utterance.rate = 0.95
+    utterance.pitch = 1.15
+
+    window.speechSynthesis.cancel()
+    window.speechSynthesis.speak(utterance)
+  }
+
   const startRound = () => {
     const firstWord = pickWeightedWord(WATERWEGEN, mistakeCount)
 
@@ -259,6 +280,7 @@ function App() {
       setQuestionNumber(QUESTIONS_PER_ROUND)
       setCurrentWord(null)
       setAnswer('')
+      speakCelebration()
       return
     }
 
@@ -397,11 +419,25 @@ function App() {
 
         {roundFinished && (
           <section className="round-end">
+            <img
+              className="celebration-gif"
+              src={celebrationGif}
+              alt="Enthousiaste thumbs up"
+            />
+            <p className="mascot-text">Goed gedaan!</p>
             <h2>Ronde klaar!</h2>
             <p>
               Je had {roundCorrect} van de {QUESTIONS_PER_ROUND} goed.
             </p>
             <p className="help">Woorden die fout gingen komen straks vaker terug.</p>
+            <div className="round-end-actions">
+              <button className="btn secondary" onClick={speakCelebration} type="button">
+                Zeg het nog eens
+              </button>
+              {!speechSupported && (
+                <p className="warn">Deze browser ondersteunt geen voorleesfunctie.</p>
+              )}
+            </div>
             <button className="btn primary" onClick={startNextRound}>
               Nieuwe ronde
             </button>
@@ -413,5 +449,6 @@ function App() {
 }
 
 export default App
+
 
 
