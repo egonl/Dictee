@@ -21,6 +21,7 @@ const WATERWEGEN = [
 ]
 
 const PRESET_QUESTION_COUNTS = [5, 10, 15, 20, 30]
+const LOCALE = 'nl-NL'
 
 type LetterState = 'correct' | 'wrong' | 'missing' | 'extra'
 
@@ -29,9 +30,13 @@ type LetterFeedback = {
   actual?: string
   state: LetterState
 }
+type Step = 'diag' | 'up' | 'left' | null
 
 const normalize = (value: string) =>
-  value.toLocaleLowerCase('nl-NL').trim().replace(/\s+/g, ' ')
+  value.toLocaleLowerCase(LOCALE).trim().replace(/\s+/g, ' ')
+
+const isSameChar = (a: string, b: string) =>
+  a.toLocaleLowerCase(LOCALE) === b.toLocaleLowerCase(LOCALE)
 
 const isCorrectAnswer = (answer: string, target: string) =>
   normalize(answer) === normalize(target)
@@ -67,40 +72,119 @@ const charLabel = (char: string) => {
 }
 
 const buildFeedback = (answer: string, target: string): LetterFeedback[] => {
-  // Vergelijk letter-voor-letter zodat de UI precies kan tonen wat goed/fout/mist/extra is.
-  const cleanedAnswer = answer.trim()
-  const answerChars = [...cleanedAnswer]
+  // Edit-distance met expliciete operatiekeuze.
+  // Substitutie is duurder dan insert/delete, zodat verschuivingen als missing/extra worden gezien.
+  const answerChars = [...answer.trim()]
   const targetChars = [...target]
-  const length = Math.max(answerChars.length, targetChars.length)
+  const rows = targetChars.length
+  const cols = answerChars.length
+
+  const cost: number[][] = Array.from({ length: rows + 1 }, () =>
+    Array.from({ length: cols + 1 }, () => 0),
+  )
+  const parent: Step[][] = Array.from(
+    { length: rows + 1 },
+    () => Array.from({ length: cols + 1 }, () => null),
+  )
+
+  for (let i = 1; i <= rows; i += 1) {
+    cost[i][0] = cost[i - 1][0] + 1
+    parent[i][0] = 'up'
+  }
+  for (let j = 1; j <= cols; j += 1) {
+    cost[0][j] = cost[0][j - 1] + 1
+    parent[0][j] = 'left'
+  }
+
+  for (let i = 1; i <= rows; i += 1) {
+    for (let j = 1; j <= cols; j += 1) {
+      const expected = targetChars[i - 1]
+      const actual = answerChars[j - 1]
+      const same = isSameChar(expected, actual)
+
+      const diagCost = cost[i - 1][j - 1] + (same ? 0 : 2)
+      const upCost = cost[i - 1][j] + 1
+      const leftCost = cost[i][j - 1] + 1
+
+      const best = Math.min(diagCost, upCost, leftCost)
+      cost[i][j] = best
+
+      // Tie-break:
+      // 1) perfecte match diag
+      // 2) missing (up)
+      // 3) extra (left)
+      // 4) substitutie/wrong diag
+      if (same && diagCost === best) {
+        parent[i][j] = 'diag'
+      } else if (upCost === best) {
+        parent[i][j] = 'up'
+      } else if (leftCost === best) {
+        parent[i][j] = 'left'
+      } else {
+        parent[i][j] = 'diag'
+      }
+    }
+  }
+
   const feedback: LetterFeedback[] = []
+  let i = rows
+  let j = cols
 
-  for (let i = 0; i < length; i += 1) {
-    const expected = targetChars[i]
-    const actual = answerChars[i]
+  while (i > 0 || j > 0) {
+    const step = parent[i][j]
 
-    if (expected === undefined && actual !== undefined) {
-      feedback.push({ actual, state: 'extra' })
+    if (step === 'up' && i > 0) {
+      feedback.push({
+        expected: targetChars[i - 1],
+        state: 'missing',
+      })
+      i -= 1
       continue
     }
 
-    if (expected !== undefined && actual === undefined) {
-      feedback.push({ expected, state: 'missing' })
+    if (step === 'left' && j > 0) {
+      feedback.push({
+        actual: answerChars[j - 1],
+        state: 'extra',
+      })
+      j -= 1
       continue
     }
 
-    if (expected !== undefined && actual !== undefined) {
-      const isMatch =
-        expected.toLocaleLowerCase('nl-NL') ===
-        actual.toLocaleLowerCase('nl-NL')
+    if (i > 0 && j > 0) {
+      const expected = targetChars[i - 1]
+      const actual = answerChars[j - 1]
+      const same = isSameChar(expected, actual)
 
       feedback.push({
         expected,
         actual,
-        state: isMatch ? 'correct' : 'wrong',
+        state: same ? 'correct' : 'wrong',
       })
+      i -= 1
+      j -= 1
+      continue
+    }
+
+    if (i > 0) {
+      feedback.push({
+        expected: targetChars[i - 1],
+        state: 'missing',
+      })
+      i -= 1
+      continue
+    }
+
+    if (j > 0) {
+      feedback.push({
+        actual: answerChars[j - 1],
+        state: 'extra',
+      })
+      j -= 1
     }
   }
 
+  feedback.reverse()
   return feedback
 }
 
@@ -167,6 +251,10 @@ function App() {
   const [lastCorrectWord, setLastCorrectWord] = useState('')
   const [questionsPerRound, setQuestionsPerRound] = useState(10)
   const [customQuestionCount, setCustomQuestionCount] = useState('')
+  const [roundMistakes, setRoundMistakes] = useState<
+    { word: string; answer: string; feedback: LetterFeedback[] }[]
+  >([])
+  const [showMistakes, setShowMistakes] = useState(false)
 
   const speechSupported =
     typeof window !== 'undefined' && 'speechSynthesis' in window
@@ -187,29 +275,24 @@ function App() {
     const excluded = new Set(nextAsked)
     const uniqueOptions = WATERWEGEN.filter((word) => !excluded.has(word))
     const options = uniqueOptions.length > 0 ? uniqueOptions : WATERWEGEN
-
-    if (options.length === 0) {
-      return null
-    }
-
     return pickWeightedWord(options, mistakesSnapshot)
   }
 
-  const speakWord = (word: string) => {
+  const speakText = (text: string, rate: number, pitch: number) => {
     if (!speechSupported) {
       return
     }
 
-    const utterance = new SpeechSynthesisUtterance(word)
+    const utterance = new SpeechSynthesisUtterance(text)
     const dutchVoice = pickDutchFemaleVoice(window.speechSynthesis.getVoices())
 
     if (dutchVoice) {
       utterance.voice = dutchVoice
     }
 
-    utterance.lang = dutchVoice?.lang ?? 'nl-NL'
-    utterance.rate = 0.85
-    utterance.pitch = 1.05
+    utterance.lang = dutchVoice?.lang ?? LOCALE
+    utterance.rate = rate
+    utterance.pitch = pitch
     utterance.onstart = () => setIsSpeaking(true)
     utterance.onend = () => setIsSpeaking(false)
     utterance.onerror = () => setIsSpeaking(false)
@@ -219,24 +302,22 @@ function App() {
     window.speechSynthesis.speak(utterance)
   }
 
+  const speakWord = (word: string) => {
+    speakText(word, 0.85, 1.05)
+  }
+
   const speakCelebration = () => {
-    if (!speechSupported) {
-      return
-    }
+    speakText('Goed gedaan!', 0.95, 1.15)
+  }
 
-    const utterance = new SpeechSynthesisUtterance('Goed gedaan!')
-    const dutchVoice = pickDutchFemaleVoice(window.speechSynthesis.getVoices())
-
-    if (dutchVoice) {
-      utterance.voice = dutchVoice
-    }
-
-    utterance.lang = dutchVoice?.lang ?? 'nl-NL'
-    utterance.rate = 0.95
-    utterance.pitch = 1.15
-
-    window.speechSynthesis.cancel()
-    window.speechSynthesis.speak(utterance)
+  const resetRoundUi = () => {
+    setRoundCorrect(0)
+    setLastFeedback([])
+    setLastResultCorrect(null)
+    setLastAttempt('')
+    setLastCorrectWord('')
+    setRoundMistakes([])
+    setShowMistakes(false)
   }
 
   const startRound = () => {
@@ -246,9 +327,7 @@ function App() {
     setCurrentWord(firstWord)
     setAskedThisRound([firstWord])
     setAnswer('')
-    setRoundCorrect(0)
-    setLastFeedback([])
-    setLastResultCorrect(null)
+    resetRoundUi()
 
     speakWord(firstWord)
   }
@@ -262,11 +341,7 @@ function App() {
     setCurrentWord(null)
     setAskedThisRound([])
     setAnswer('')
-    setRoundCorrect(0)
-    setLastFeedback([])
-    setLastResultCorrect(null)
-    setLastAttempt('')
-    setLastCorrectWord('')
+    resetRoundUi()
     setIsSpeaking(false)
   }
 
@@ -295,6 +370,13 @@ function App() {
     setLastAttempt(answer.trim())
     setLastCorrectWord(currentWord)
     setTotalQuestions((previous) => previous + 1)
+
+    if (!correct) {
+      setRoundMistakes((previous) => [
+        ...previous,
+        { word: currentWord, answer: answer.trim(), feedback },
+      ])
+    }
 
     // Snapshot wordt meteen gebruikt voor de volgende gewogen selectie.
     let nextMistakeCount = mistakeCount
@@ -492,7 +574,7 @@ function App() {
         )}
 
         {roundFinished && (
-          <section className="round-end">
+        <section className="round-end">
             <img
               className="celebration-gif"
               src={celebrationGif}
@@ -504,6 +586,53 @@ function App() {
               Je had {roundCorrect} van de {questionsPerRound} goed.
             </p>
             <p className="help">Woorden die fout gingen komen straks vaker terug.</p>
+            {roundMistakes.length > 0 && (
+              <>
+                <button
+                  className="btn secondary"
+                  type="button"
+                  onClick={() => setShowMistakes((previous) => !previous)}
+                >
+                  {showMistakes ? 'Verberg fouten' : 'Bekijk fouten'}
+                </button>
+                {showMistakes && (
+                <div className="mistakes-panel">
+                  {roundMistakes.map((mistake, index) => (
+                    <article key={`${mistake.word}-${index}`}>
+                        <h3>
+                          {mistake.word} ← {mistake.answer || '(leeg)'}
+                        </h3>
+                        <div className="letter-grid compact">
+                          {mistake.feedback.map((item, idx) => (
+                            <span
+                              key={`${item.expected ?? item.actual}-${idx}`}
+                              className={`letter ${item.state}`}
+                            >
+                              {item.state === 'extra' && item.actual
+                                ? `+ ${charLabel(item.actual)}`
+                                : null}
+                              {item.state === 'missing' && item.expected
+                                ? `? ${charLabel(item.expected)}`
+                                : null}
+                              {(item.state === 'correct' || item.state === 'wrong') &&
+                              item.expected
+                                ? charLabel(item.expected)
+                                : null}
+                            </span>
+                          ))}
+                        </div>
+                      </article>
+                    ))}
+                    <p className="legend legend-inline">
+                      <span className="chip correct">Goed</span>
+                      <span className="chip wrong">Fout</span>
+                      <span className="chip missing">Mist</span>
+                      <span className="chip extra">Extra</span>
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
             <div className="round-end-actions">
               <button className="btn secondary" onClick={speakCelebration} type="button">
                 Zeg het nog eens

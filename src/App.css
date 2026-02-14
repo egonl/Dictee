@@ -264,6 +264,11 @@ strong {
   flex-wrap: wrap;
 }
 
+.legend-inline {
+  margin: 10px 0 0;
+  justify-content: center;
+}
+
 .chip {
   border-radius: 999px;
   padding: 4px 9px;
@@ -317,6 +322,32 @@ strong {
   gap: 10px;
   flex-wrap: wrap;
   margin: 10px 0;
+}
+
+.mistakes-panel {
+  margin: 10px 0;
+  border: 1px dashed rgba(7, 59, 95, 0.24);
+  border-radius: 12px;
+  padding: 12px;
+  background: #edf8ff;
+}
+
+.mistakes-panel article {
+  margin-bottom: 10px;
+}
+
+.mistakes-panel article:last-child {
+  margin-bottom: 0;
+}
+
+.mistakes-panel h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #0e4a70;
+}
+
+.letter-grid.compact {
+  margin-top: 6px;
 }
 
 @keyframes float {
