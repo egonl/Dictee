@@ -3,6 +3,8 @@ import type { FormEvent } from 'react'
 import './App.css'
 import celebrationGif from './assets/thumbs-up.gif'
 
+type OrderMode = 'fixed' | 'random'
+
 // Basisset woorden voor dit eerste dictee-thema.
 const WORD_LISTS: Record<string, string[]> = {
   'Nederlandse wateren': [
@@ -43,7 +45,6 @@ const WORD_LISTS: Record<string, string[]> = {
 }
 
 const PRESET_QUESTION_COUNTS = [5, 10, 15, 20, 30]
-const WORD_LIST_NAMES = Object.keys(WORD_LISTS)
 const LOCALE = 'nl-NL'
 
 type LetterState = 'correct' | 'wrong' | 'missing' | 'extra'
@@ -263,11 +264,18 @@ function App() {
     { word: string; answer: string; feedback: LetterFeedback[] }[]
   >([])
   const [showMistakes, setShowMistakes] = useState(false)
-  const [activeWordListKey, setActiveWordListKey] = useState(WORD_LIST_NAMES[0])
-  const activeWordList = useMemo(
-    () => WORD_LISTS[activeWordListKey],
-    [activeWordListKey],
-  )
+  const [userLists, setUserLists] = useState<Record<string, string[]>>({})
+  const allLists = useMemo(() => ({ ...WORD_LISTS, ...userLists }), [userLists])
+  const listNames = useMemo(() => Object.keys(allLists), [allLists])
+  const baseListName = listNames[0]
+  const [activeWordListKey, setActiveWordListKey] = useState(baseListName)
+  const activeWordList = allLists[activeWordListKey] ?? allLists[baseListName]
+  const [orderMode, setOrderMode] = useState<OrderMode>('random')
+  const [showNewListDialog, setShowNewListDialog] = useState(false)
+  const [newListTitle, setNewListTitle] = useState('')
+  const [newListBody, setNewListBody] = useState('')
+  const [newListRandom, setNewListRandom] = useState(true)
+  const [newListError, setNewListError] = useState<string | null>(null)
   const pendingRef = useRef<string[]>([])
 
   const speechSupported =
@@ -330,7 +338,7 @@ function App() {
         .filter(([, count]) => count > 0)
         .map(([word]) => word)
       const base = mistakeWords.length > 0 ? mistakeWords : activeWordList
-      pool = shuffleWords(base)
+      pool = orderMode === 'random' ? shuffleWords(base) : [...base]
     }
 
     const [nextWord, ...rest] = pool
@@ -364,6 +372,55 @@ function App() {
   const handleWordListChange = (key: string) => {
     setActiveWordListKey(key)
     goToStartScreen()
+  }
+
+  const resetNewListDialog = () => {
+    setNewListTitle('')
+    setNewListBody('')
+    setNewListRandom(true)
+    setNewListError(null)
+  }
+
+  const handleCreateList = () => {
+    const title = newListTitle.trim()
+    if (!title) {
+      setNewListError('Vul een titel in.')
+      return
+    }
+
+    const entries = newListBody
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+
+    if (entries.length === 0) {
+      setNewListError('Geef minimaal één woord of zin op.')
+      return
+    }
+
+    let key = `Nieuw: ${title}`
+    let suffix = 1
+    while (allLists[key]) {
+      key = `Nieuw: ${title} (${suffix})`
+      suffix += 1
+    }
+
+    setUserLists((previous) => ({
+      ...previous,
+      [key]: entries,
+    }))
+
+    setActiveWordListKey(key)
+    if (newListRandom) {
+      setOrderMode('random')
+    } else {
+      setOrderMode('fixed')
+    }
+
+    resetRoundUi()
+    pendingRef.current = []
+    resetNewListDialog()
+    setShowNewListDialog(false)
   }
 
   const applyCustomQuestionCount = () => {
@@ -494,16 +551,30 @@ function App() {
           <div className="center-block">
             <p className="help">Druk op start en luister naar de uitgesproken waterweg.</p>
             <div className="list-picker">
-              {WORD_LIST_NAMES.map((key) => (
-                <button
-                  key={key}
-                  className={`btn choice ${activeWordListKey === key ? 'active' : ''}`}
-                  type="button"
-                  onClick={() => handleWordListChange(key)}
+              <label htmlFor="word-list-select">Kies woordenlijst</label>
+              <div className="list-picker-row">
+                <select
+                  id="word-list-select"
+                  value={activeWordListKey}
+                  onChange={(event) => handleWordListChange(event.target.value)}
                 >
-                  {key}
+                  {listNames.map((key) => (
+                    <option key={key} value={key}>
+                      {key}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  className="btn secondary"
+                  type="button"
+                  onClick={() => {
+                    resetNewListDialog()
+                    setShowNewListDialog(true)
+                  }}
+                >
+                  Nieuw...
                 </button>
-              ))}
+              </div>
             </div>
             <div className="question-picker">
               {PRESET_QUESTION_COUNTS.map((count) => (
@@ -532,6 +603,44 @@ function App() {
                 Gebruik aantal
               </button>
             </div>
+            {showNewListDialog && (
+              <div className="dialog-overlay">
+                <div className="dialog">
+                  <h3>Nieuwe lijst</h3>
+                  <label htmlFor="new-list-title">Titel</label>
+                  <input
+                    id="new-list-title"
+                    value={newListTitle}
+                    onChange={(event) => setNewListTitle(event.target.value)}
+                    placeholder="Bijv. Avonturenboek"
+                  />
+                  <label htmlFor="new-list-body">Woorden/zinnen (één per regel)</label>
+                  <textarea
+                    id="new-list-body"
+                    value={newListBody}
+                    onChange={(event) => setNewListBody(event.target.value)}
+                    rows={6}
+                  />
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={newListRandom}
+                      onChange={(event) => setNewListRandom(event.target.checked)}
+                    />
+                    Willekeurig afspelen
+                  </label>
+                  {newListError && <p className="warn">{newListError}</p>}
+                  <div className="dialog-actions">
+                    <button className="btn secondary" onClick={() => setShowNewListDialog(false)} type="button">
+                      Annuleren
+                    </button>
+                    <button className="btn primary" onClick={handleCreateList} type="button">
+                      OK
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             <p className="help">Nu ingesteld: {questionsPerRound} vragen per ronde.</p>
             <button className="btn primary" onClick={startRound}>
               Start dictee
