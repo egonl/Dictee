@@ -119,6 +119,14 @@ strong {
   margin: 12px 0;
 }
 
+.list-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
 .btn.choice {
   background: #e6f6ff;
   color: #124f74;

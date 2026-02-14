@@ -4,23 +4,46 @@ import './App.css'
 import celebrationGif from './assets/thumbs-up.gif'
 
 // Basisset woorden voor dit eerste dictee-thema.
-const WATERWEGEN = [
-  'Waddenzee',
-  'IJsselmeer',
-  'Markermeer',
-  'IJssel',
-  'Nederrijn',
-  'Waal',
-  'Maas',
-  'Noordzeekanaal',
-  'Amsterdam-Rijnkanaal',
-  'Lek',
-  'Nieuwe Waterweg',
-  'Oosterschelde',
-  'Westerschelde',
-]
+const WORD_LISTS: Record<string, string[]> = {
+  'Nederlandse wateren': [
+    'Waddenzee',
+    'IJsselmeer',
+    'Markermeer',
+    'IJssel',
+    'Nederrijn',
+    'Waal',
+    'Maas',
+    'Noordzeekanaal',
+    'Amsterdam-Rijnkanaal',
+    'Lek',
+    'Nieuwe Waterweg',
+    'Oosterschelde',
+    'Westerschelde',
+  ],
+  'Bekende artiesten': [
+    'The Weeknd',
+    'Billie Eilish',
+    'Taylor Swift',
+    'Drake',
+    'Ariana Grande',
+    'Post Malone',
+    'Dua Lipa',
+    'Kanye West',
+    'Travis Scott',
+    'Harry Styles',
+    'Olivia Rodrigo',
+    'Shakira',
+    'Bad Bunny',
+    'Kendrick Lamar',
+    'Lady Gaga',
+    'Ed Sheeran',
+    'Rihanna',
+    'Justin Bieber',
+  ],
+}
 
 const PRESET_QUESTION_COUNTS = [5, 10, 15, 20, 30]
+const WORD_LIST_NAMES = Object.keys(WORD_LISTS)
 const LOCALE = 'nl-NL'
 
 type LetterState = 'correct' | 'wrong' | 'missing' | 'extra'
@@ -41,34 +64,20 @@ const isSameChar = (a: string, b: string) =>
 const isCorrectAnswer = (answer: string, target: string) =>
   normalize(answer) === normalize(target)
 
-const pickWeightedWord = (
-  options: string[],
-  mistakeCount: Record<string, number>,
-) => {
-  // Woorden met meer fouten krijgen hogere kans om terug te komen.
-  const weights = options.map((word) => 1 + (mistakeCount[word] ?? 0) * 3)
-  const totalWeight = weights.reduce((sum, value) => sum + value, 0)
-
-  if (totalWeight <= 0) {
-    return options[Math.floor(Math.random() * options.length)]
-  }
-
-  let random = Math.random() * totalWeight
-  for (let i = 0; i < options.length; i += 1) {
-    random -= weights[i]
-    if (random <= 0) {
-      return options[i]
-    }
-  }
-
-  return options[options.length - 1]
-}
-
 const charLabel = (char: string) => {
   if (char === ' ') {
     return 'spatie'
   }
   return char
+}
+
+const shuffleWords = (words: string[]) => {
+  const result = [...words]
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[result[i], result[j]] = [result[j], result[i]]
+  }
+  return result
 }
 
 const buildFeedback = (answer: string, target: string): LetterFeedback[] => {
@@ -238,7 +247,6 @@ function App() {
   const [round, setRound] = useState(1)
   const [questionNumber, setQuestionNumber] = useState(0)
   const [currentWord, setCurrentWord] = useState<string | null>(null)
-  const [askedThisRound, setAskedThisRound] = useState<string[]>([])
   const [answer, setAnswer] = useState('')
   const [roundCorrect, setRoundCorrect] = useState(0)
   const [totalCorrect, setTotalCorrect] = useState(0)
@@ -255,6 +263,12 @@ function App() {
     { word: string; answer: string; feedback: LetterFeedback[] }[]
   >([])
   const [showMistakes, setShowMistakes] = useState(false)
+  const [activeWordListKey, setActiveWordListKey] = useState(WORD_LIST_NAMES[0])
+  const activeWordList = useMemo(
+    () => WORD_LISTS[activeWordListKey],
+    [activeWordListKey],
+  )
+  const pendingRef = useRef<string[]>([])
 
   const speechSupported =
     typeof window !== 'undefined' && 'speechSynthesis' in window
@@ -266,17 +280,6 @@ function App() {
     }
     return Math.round((totalCorrect / totalQuestions) * 100)
   }, [totalCorrect, totalQuestions])
-
-  const prepareNextWord = (
-    nextAsked: string[],
-    mistakesSnapshot: Record<string, number>,
-  ) => {
-    // Binnen 1 ronde tonen we woorden eerst uniek. Is de lijst op, dan hergebruiken we.
-    const excluded = new Set(nextAsked)
-    const uniqueOptions = WATERWEGEN.filter((word) => !excluded.has(word))
-    const options = uniqueOptions.length > 0 ? uniqueOptions : WATERWEGEN
-    return pickWeightedWord(options, mistakesSnapshot)
-  }
 
   const speakText = (text: string, rate: number, pitch: number) => {
     if (!speechSupported) {
@@ -320,15 +323,28 @@ function App() {
     setShowMistakes(false)
   }
 
+  const drawNextWord = (currentMistakes: Record<string, number>) => {
+    let pool = pendingRef.current
+    if (pool.length === 0) {
+      const mistakeWords = Object.entries(currentMistakes)
+        .filter(([, count]) => count > 0)
+        .map(([word]) => word)
+      const base = mistakeWords.length > 0 ? mistakeWords : activeWordList
+      pool = shuffleWords(base)
+    }
+
+    const [nextWord, ...rest] = pool
+    pendingRef.current = rest
+    return nextWord ?? activeWordList[0]
+  }
+
   const startRound = () => {
-    const firstWord = pickWeightedWord(WATERWEGEN, mistakeCount)
+    const firstWord = drawNextWord(mistakeCount)
 
     setQuestionNumber(1)
     setCurrentWord(firstWord)
-    setAskedThisRound([firstWord])
     setAnswer('')
     resetRoundUi()
-
     speakWord(firstWord)
   }
 
@@ -339,10 +355,15 @@ function App() {
 
     setQuestionNumber(0)
     setCurrentWord(null)
-    setAskedThisRound([])
     setAnswer('')
     resetRoundUi()
     setIsSpeaking(false)
+    pendingRef.current = []
+  }
+
+  const handleWordListChange = (key: string) => {
+    setActiveWordListKey(key)
+    goToStartScreen()
   }
 
   const applyCustomQuestionCount = () => {
@@ -384,10 +405,8 @@ function App() {
     if (correct) {
       setRoundCorrect((previous) => previous + 1)
       setTotalCorrect((previous) => previous + 1)
-      nextMistakeCount = {
-        ...mistakeCount,
-        [currentWord]: Math.max((mistakeCount[currentWord] ?? 0) - 1, 0),
-      }
+      nextMistakeCount = { ...mistakeCount }
+      delete nextMistakeCount[currentWord]
     } else {
       nextMistakeCount = {
         ...mistakeCount,
@@ -406,8 +425,7 @@ function App() {
       return
     }
 
-    const nextAsked = [...askedThisRound, currentWord]
-    const nextWord = prepareNextWord(nextAsked, nextMistakeCount)
+    const nextWord = drawNextWord(nextMistakeCount)
 
     if (!nextWord) {
       setCurrentWord(null)
@@ -415,7 +433,6 @@ function App() {
     }
 
     setQuestionNumber((previous) => previous + 1)
-    setAskedThisRound((previous) => [...previous, nextWord])
     setCurrentWord(nextWord)
     setAnswer('')
 
@@ -447,7 +464,7 @@ function App() {
             Terug naar begin
           </button>
         </div>
-        <h1>Dictee van Nederlandse Wateren</h1>
+        <h1>Dictee: {activeWordListKey}</h1>
         <p className="subtitle">Luister goed, typ het woord en check je spelling per letter.</p>
 
         <div className="stats">
@@ -476,6 +493,18 @@ function App() {
         {questionNumber === 0 && (
           <div className="center-block">
             <p className="help">Druk op start en luister naar de uitgesproken waterweg.</p>
+            <div className="list-picker">
+              {WORD_LIST_NAMES.map((key) => (
+                <button
+                  key={key}
+                  className={`btn choice ${activeWordListKey === key ? 'active' : ''}`}
+                  type="button"
+                  onClick={() => handleWordListChange(key)}
+                >
+                  {key}
+                </button>
+              ))}
+            </div>
             <div className="question-picker">
               {PRESET_QUESTION_COUNTS.map((count) => (
                 <button
@@ -652,6 +681,3 @@ function App() {
 }
 
 export default App
-
-
-
