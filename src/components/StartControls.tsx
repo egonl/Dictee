@@ -1,0 +1,96 @@
+const PRESET_QUESTION_COUNTS = [5, 10, 15, 20, 30];
+
+type StartControlsProps = {
+  listNames: string[];
+  activeWordListKey: string;
+  questionsPerRound: number;
+  customQuestionCount: string;
+  onListChange: (value: string) => void;
+  onPresetSelect: (count: number) => void;
+  onCustomChange: (value: string) => void;
+  onCustomApply: () => void;
+  onStart: () => void;
+  onNewList: () => void;
+  onEditList: () => void;
+};
+
+export default function StartControls({
+  listNames,
+  activeWordListKey,
+  questionsPerRound,
+  customQuestionCount,
+  onListChange,
+  onPresetSelect,
+  onCustomChange,
+  onCustomApply,
+  onStart,
+  onNewList,
+  onEditList,
+}: StartControlsProps) {
+  return (
+    <div className="center-block">
+      <p className="help">
+        Druk op start en luister naar de uitgesproken waterweg.
+      </p>
+      <div className="list-picker">
+        <label htmlFor="word-list-select">Kies woordenlijst</label>
+        <div className="list-picker-row">
+          <select
+            id="word-list-select"
+            value={activeWordListKey}
+            onChange={(event) => onListChange(event.target.value)}
+          >
+            {listNames.map((key) => (
+              <option key={key} value={key}>
+                {key}
+              </option>
+            ))}
+          </select>
+          <button className="btn secondary" type="button" onClick={onNewList}>
+            Nieuw...
+          </button>
+          <button className="btn secondary" type="button" onClick={onEditList}>
+            Bewerken
+          </button>
+        </div>
+      </div>
+      <div className="question-picker">
+        {PRESET_QUESTION_COUNTS.map((count) => (
+          <button
+            key={count}
+            className={`btn choice ${
+              questionsPerRound === count ? "active" : ""
+            }`}
+            onClick={() => onPresetSelect(count)}
+            type="button"
+          >
+            {count}
+          </button>
+        ))}
+      </div>
+      <div className="custom-question-picker">
+        <label htmlFor="custom-count">Eigen aantal vragen</label>
+        <input
+          id="custom-count"
+          type="number"
+          min={1}
+          max={100}
+          value={customQuestionCount}
+          onChange={(event) => onCustomChange(event.target.value)}
+          placeholder="Bijv. 12"
+        />
+        <button
+          className="btn secondary"
+          onClick={onCustomApply}
+          type="button"
+        >
+          Gebruik aantal
+        </button>
+      </div>
+      <p className="help">Nu ingesteld: {questionsPerRound} vragen per ronde.</p>
+      <button className="btn primary" onClick={onStart}>
+        Start dictee
+      </button>
+    </div>
+  );
+}
