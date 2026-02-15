@@ -12,6 +12,8 @@ type StartControlsProps = {
   onStart: () => void;
   onNewList: () => void;
   onEditList: () => void;
+  onDeleteList: () => void;
+  canDeleteList: boolean;
 };
 
 export default function StartControls({
@@ -26,6 +28,8 @@ export default function StartControls({
   onStart,
   onNewList,
   onEditList,
+  onDeleteList,
+  canDeleteList,
 }: StartControlsProps) {
   return (
     <div className="center-block">
@@ -51,6 +55,14 @@ export default function StartControls({
           </button>
           <button className="btn secondary" type="button" onClick={onEditList}>
             Bewerken
+          </button>
+          <button
+            className="btn secondary"
+            type="button"
+            onClick={onDeleteList}
+            disabled={!canDeleteList}
+          >
+            Verwijderen
           </button>
         </div>
       </div>

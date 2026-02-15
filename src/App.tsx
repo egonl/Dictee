@@ -15,6 +15,21 @@ const DEFAULT_QUESTION_COUNT = Math.max(
   WORD_LISTS[DEFAULT_LIST_NAME]?.entries.length ?? 1,
 );
 const LOCALE = "nl-NL";
+const USER_LISTS_STORAGE_KEY = "dictee:userLists";
+const loadStoredLists = (): Record<string, WordListDefinition> => {
+  if (typeof window === "undefined") {
+    return {};
+  }
+  try {
+    const stored = window.localStorage.getItem(USER_LISTS_STORAGE_KEY);
+    if (!stored) {
+      return {};
+    }
+    return JSON.parse(stored) as Record<string, WordListDefinition>;
+  } catch {
+    return {};
+  }
+};
 type Step = "diag" | "up" | "left" | null;
 const normalize = (value: string) =>
   value.toLocaleLowerCase(LOCALE).trim().replace(/\s+/g, " ");
@@ -192,9 +207,18 @@ function App() {
   const [customQuestionCount, setCustomQuestionCount] = useState("");
   const [roundMistakes, setRoundMistakes] = useState<MistakeEntry[]>([]);
   const [showMistakes, setShowMistakes] = useState(false);
-  const [userLists, setUserLists] = useState<
-    Record<string, WordListDefinition>
-  >({});
+  const [userLists, setUserLists] = useState<Record<string, WordListDefinition>>(
+    () => loadStoredLists(),
+  );
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(
+      USER_LISTS_STORAGE_KEY,
+      JSON.stringify(userLists),
+    );
+  }, [userLists]);
   const allLists = useMemo(
     () => ({ ...WORD_LISTS, ...userLists }),
     [userLists],
@@ -295,6 +319,19 @@ function App() {
     const listCount = allLists[key]?.entries.length ?? activeWordList.length;
     setQuestionsPerRound(Math.max(listCount, 1));
     goToStartScreen();
+  };
+  const handleDeleteList = () => {
+    if (!userLists[activeWordListKey]) {
+      return;
+    }
+
+    setUserLists((previous) => {
+      const next = { ...previous };
+      delete next[activeWordListKey];
+      const nextNames = Object.keys({ ...WORD_LISTS, ...next });
+      setActiveWordListKey(nextNames[0]);
+      return next;
+    });
   };
   const resetNewListDialog = () => {
     setNewListTitle("");
@@ -446,6 +483,7 @@ function App() {
     setRound((previous) => previous + 1);
     startRound();
   };
+  const canDeleteActiveList = Boolean(userLists[activeWordListKey]);
   const roundFinished =
     questionNumber >= questionsPerRound && currentWord === null;
   // Houd focus op het invoerveld tijdens actief dictee.
@@ -493,6 +531,8 @@ function App() {
             onStart={startRound}
             onNewList={openNewListDialog}
             onEditList={openEditListDialog}
+            onDeleteList={handleDeleteList}
+            canDeleteList={canDeleteActiveList}
           />
         )}
 
