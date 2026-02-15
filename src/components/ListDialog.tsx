@@ -4,12 +4,14 @@ type ListDialogProps = {
   title: string;
   body: string;
   random: boolean;
+  gifUrl: string;
   error: string | null;
   onClose: () => void;
   onSave: () => void;
   onTitleChange: (value: string) => void;
   onBodyChange: (value: string) => void;
   onRandomChange: (value: boolean) => void;
+  onGifUrlChange: (value: string) => void;
 };
 
 import { useEffect, useRef } from "react";
@@ -20,12 +22,14 @@ export default function ListDialog({
   title,
   body,
   random,
+  gifUrl,
   error,
   onClose,
   onSave,
   onTitleChange,
   onBodyChange,
   onRandomChange,
+  onGifUrlChange,
 }: ListDialogProps) {
   const titleInputRef = useRef<HTMLInputElement>(null);
 
@@ -68,6 +72,13 @@ export default function ListDialog({
           />
           Willekeurig afspelen
         </label>
+        <label htmlFor="new-list-gif-url">GIF URL (optioneel)</label>
+        <input
+          id="new-list-gif-url"
+          value={gifUrl}
+          onChange={(event) => onGifUrlChange(event.target.value)}
+          placeholder="https://..."
+        />
         {error && <p className="warn">{error}</p>}
         <div className="dialog-actions">
           <button className="btn secondary" onClick={onClose} type="button">

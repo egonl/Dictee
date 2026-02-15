@@ -1,4 +1,3 @@
-import celebrationGif from "../assets/thumbs-up.gif";
 import type { MistakeEntry } from "../types";
 import MistakesPanel from "./MistakesPanel";
 
@@ -11,6 +10,7 @@ type RoundEndSectionProps = {
   speechSupported: boolean;
   onReplay: () => void;
   onNextRound: () => void;
+  celebrationGifSrc: string;
 };
 
 export default function RoundEndSection({
@@ -22,12 +22,13 @@ export default function RoundEndSection({
   speechSupported,
   onReplay,
   onNextRound,
+  celebrationGifSrc,
 }: RoundEndSectionProps) {
   return (
     <section className="round-end">
       <img
         className="celebration-gif"
-        src={celebrationGif}
+        src={celebrationGifSrc}
         alt="Enthousiaste thumbs up"
       />
       <p className="mascot-text">Goed gedaan!</p>

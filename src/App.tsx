@@ -7,6 +7,7 @@ import ListDialog from "./components/ListDialog";
 import RoundEndSection from "./components/RoundEndSection";
 import StartControls from "./components/StartControls";
 import StatsPanel from "./components/StatsPanel";
+import celebrationGif from "./assets/thumbs-up.gif";
 import { WORD_LISTS, type WordListDefinition } from "./data/wordLists";
 import type { LetterFeedback, MistakeEntry } from "./types";
 const DEFAULT_LIST_NAME = Object.keys(WORD_LISTS)[0];
@@ -231,10 +232,12 @@ function App() {
   const activeWordList =
     activeWordListData?.entries ?? allLists[baseListName]?.entries ?? [];
   const activeListRandom = activeWordListData?.random ?? true;
+  const celebrationGifSrc = activeWordListData?.gifUrl ?? celebrationGif;
   const [showNewListDialog, setShowNewListDialog] = useState(false);
   const [newListTitle, setNewListTitle] = useState("");
   const [newListBody, setNewListBody] = useState("");
   const [newListRandom, setNewListRandom] = useState(true);
+  const [newListGifUrl, setNewListGifUrl] = useState("");
   const [newListError, setNewListError] = useState<string | null>(null);
   const [listDialogMode, setListDialogMode] = useState<"new" | "edit">("new");
   const [editingListKey, setEditingListKey] = useState<string | null>(null);
@@ -337,6 +340,7 @@ function App() {
     setNewListTitle("");
     setNewListBody("");
     setNewListRandom(true);
+    setNewListGifUrl("");
     setNewListError(null);
   };
 
@@ -368,6 +372,7 @@ function App() {
     setNewListTitle(activeWordListKey);
     setNewListBody(data.entries.join("\n"));
     setNewListRandom(data.random);
+    setNewListGifUrl(data.gifUrl ?? "");
     setNewListError(null);
     setListDialogMode("edit");
     setEditingListKey(activeWordListKey);
@@ -391,6 +396,7 @@ function App() {
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter((line) => line.length > 0);
+    const gifUrl = newListGifUrl.trim();
 
     if (entries.length === 0) {
       setNewListError("Geef minimaal één woord of zin op.");
@@ -410,6 +416,7 @@ function App() {
       next[targetKey] = {
         entries,
         random: newListRandom,
+        gifUrl: gifUrl.length > 0 ? gifUrl : undefined,
       };
 
       return next;
@@ -542,12 +549,14 @@ function App() {
           title={newListTitle}
           body={newListBody}
           random={newListRandom}
+          gifUrl={newListGifUrl}
           error={newListError}
           onClose={closeListDialog}
           onSave={handleSaveList}
           onTitleChange={setNewListTitle}
           onBodyChange={setNewListBody}
           onRandomChange={setNewListRandom}
+          onGifUrlChange={setNewListGifUrl}
         />
         {currentWord && (
           <AnswerArea
@@ -581,6 +590,7 @@ function App() {
             speechSupported={speechSupported}
             onReplay={speakCelebration}
             onNextRound={startNextRound}
+            celebrationGifSrc={celebrationGifSrc}
           />
         )}
       </section>

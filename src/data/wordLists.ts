@@ -1,6 +1,7 @@
 export type WordListDefinition = {
   entries: string[];
   random: boolean;
+  gifUrl?: string;
 };
 
 // Basisset woorden voor dit eerste dictee-thema.
