@@ -7,56 +7,8 @@ import ListDialog from "./components/ListDialog";
 import RoundEndSection from "./components/RoundEndSection";
 import StartControls from "./components/StartControls";
 import StatsPanel from "./components/StatsPanel";
+import { WORD_LISTS, type WordListDefinition } from "./data/wordLists";
 import type { LetterFeedback, MistakeEntry } from "./types";
-
-type WordListDefinition = {
-  entries: string[];
-  random: boolean;
-};
-// Basisset woorden voor dit eerste dictee-thema.
-const WORD_LISTS: Record<string, WordListDefinition> = {
-  "Nederlandse wateren": {
-    entries: [
-      "Waddenzee",
-      "IJsselmeer",
-      "Markermeer",
-      "IJssel",
-      "Nederrijn",
-      "Waal",
-      "Maas",
-      "Noordzeekanaal",
-      "Amsterdam-Rijnkanaal",
-      "Lek",
-      "Nieuwe Waterweg",
-      "Oosterschelde",
-      "Westerschelde",
-    ],
-    random: true,
-  },
-  "Bekende artiesten": {
-    entries: [
-      "The Weeknd",
-      "Billie Eilish",
-      "Taylor Swift",
-      "Drake",
-      "Ariana Grande",
-      "Post Malone",
-      "Dua Lipa",
-      "Kanye West",
-      "Travis Scott",
-      "Harry Styles",
-      "Olivia Rodrigo",
-      "Shakira",
-      "Bad Bunny",
-      "Kendrick Lamar",
-      "Lady Gaga",
-      "Ed Sheeran",
-      "Rihanna",
-      "Justin Bieber",
-    ],
-    random: true,
-  },
-};
 const DEFAULT_LIST_NAME = Object.keys(WORD_LISTS)[0];
 const DEFAULT_QUESTION_COUNT = Math.max(
   1,
