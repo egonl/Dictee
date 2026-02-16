@@ -52,6 +52,7 @@
 
 .card {
   width: min(860px, 100%);
+  box-sizing: border-box;
   background: var(--panel);
   border-radius: 28px;
   padding: 28px;
@@ -527,9 +528,27 @@ strong {
 
 
 @media (max-width: 720px) {
+  .app-shell {
+    padding: 12px;
+  }
+
   .card {
     padding: 20px;
     border-radius: 20px;
+  }
+
+  .center-block {
+    padding: 8px;
+  }
+
+  .list-picker-row {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .list-picker select {
+    min-width: 0;
+    width: 100%;
   }
 
   .stats {
