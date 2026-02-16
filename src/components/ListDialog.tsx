@@ -70,7 +70,7 @@ export default function ListDialog({
             checked={random}
             onChange={(event) => onRandomChange(event.target.checked)}
           />
-          Willekeurig afspelen
+          Willekeurige volgorde
         </label>
         <label htmlFor="new-list-gif-url">GIF URL (optioneel)</label>
         <input

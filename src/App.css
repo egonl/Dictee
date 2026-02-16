@@ -188,6 +188,71 @@ strong {
   color: #073b5f;
 }
 
+.mode-picker {
+  border: 0;
+  margin: 14px auto 10px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  width: min(560px, 100%);
+}
+
+.mode-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
+  text-align: left;
+  border: 2px solid #b8e9ff;
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: #f7fcff;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+  cursor: pointer;
+}
+
+.mode-option.active {
+  border-color: #59c5ff;
+  background: #eef9ff;
+  box-shadow: 0 8px 20px rgba(7, 59, 95, 0.12);
+}
+
+.radio-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.mode-option input[type="radio"] {
+  accent-color: #1ca8eb;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+.mode-option-content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.mode-option-title {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.mode-option input[type="number"] {
+  border: 2px solid #8fdaff;
+  border-radius: 12px;
+  padding: 8px 10px;
+  width: 120px;
+  font-size: 0.95rem;
+}
+
+.mode-option input[type="number"]:disabled {
+  opacity: 0.55;
+}
+
 .btn.choice {
   background: #e6f6ff;
   color: #124f74;

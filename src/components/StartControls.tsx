@@ -58,29 +58,51 @@ export default function StartControls({
           </button>
         </div>
       </div>
-      <div className="custom-question-picker compact">
-        <label htmlFor="custom-count">Vragen per ronde:</label>
-        <input
-          id="custom-count"
-          type="number"
-          min={1}
-          max={100}
-          value={customQuestionCount}
-          onChange={(event) => onCustomChange(event.target.value)}
-          placeholder="Bijv. 12"
-          disabled={continueUntilCorrect}
-        />
-      </div>
-      <label className="checkbox-label">
-        <input
-          type="checkbox"
-          checked={continueUntilCorrect}
-          onChange={(event) =>
-            onContinueUntilCorrectChange(event.target.checked)
-          }
-        />
-        Of ga door tot alles ten minste één keer goed is
-      </label>
+      <fieldset className="mode-picker" aria-label="Ronde-instelling">
+        <label
+          className={`mode-option ${!continueUntilCorrect ? "active" : ""}`}
+        >
+          <span className="radio-wrap">
+            <input
+              type="radio"
+              name="round-mode"
+              checked={!continueUntilCorrect}
+              onChange={() => onContinueUntilCorrectChange(false)}
+            />
+          </span>
+          <span className="mode-option-content">
+            <span className="mode-option-title">Vragen per ronde</span>
+            <input
+              id="custom-count"
+              type="number"
+              min={1}
+              max={100}
+              value={customQuestionCount}
+              onFocus={() => onContinueUntilCorrectChange(false)}
+              onChange={(event) => onCustomChange(event.target.value)}
+              placeholder="Bijv. 12"
+              disabled={continueUntilCorrect}
+            />
+          </span>
+        </label>
+        <label
+          className={`mode-option ${continueUntilCorrect ? "active" : ""}`}
+        >
+          <span className="radio-wrap">
+            <input
+              type="radio"
+              name="round-mode"
+              checked={continueUntilCorrect}
+              onChange={() => onContinueUntilCorrectChange(true)}
+            />
+          </span>
+          <span className="mode-option-content">
+            <span className="mode-option-title">
+              Ga door tot alles ten minste één keer goed is
+            </span>
+          </span>
+        </label>
+      </fieldset>
       <button className="btn primary" onClick={onStart}>
         Start dictee
       </button>
