@@ -1,15 +1,10 @@
-const PRESET_QUESTION_COUNTS = [5, 10, 15, 20, 30];
-
 type StartControlsProps = {
   listNames: string[];
   activeWordListKey: string;
-  questionsPerRound: number;
   customQuestionCount: string;
   continueUntilCorrect: boolean;
   onListChange: (value: string) => void;
-  onPresetSelect: (count: number) => void;
   onCustomChange: (value: string) => void;
-  onCustomApply: () => void;
   onContinueUntilCorrectChange: (value: boolean) => void;
   onStart: () => void;
   onNewList: () => void;
@@ -21,13 +16,10 @@ type StartControlsProps = {
 export default function StartControls({
   listNames,
   activeWordListKey,
-  questionsPerRound,
   customQuestionCount,
   continueUntilCorrect,
   onListChange,
-  onPresetSelect,
   onCustomChange,
-  onCustomApply,
   onContinueUntilCorrectChange,
   onStart,
   onNewList,
@@ -38,7 +30,6 @@ export default function StartControls({
   return (
     <div className="center-block">
       <div className="list-picker">
-        <label htmlFor="word-list-select">Kies woordenlijst</label>
         <div className="list-picker-row">
           <select
             id="word-list-select"
@@ -51,11 +42,11 @@ export default function StartControls({
               </option>
             ))}
           </select>
-          <button className="btn secondary" type="button" onClick={onNewList}>
-            Nieuw...
-          </button>
           <button className="btn secondary" type="button" onClick={onEditList}>
             Bewerken
+          </button>
+          <button className="btn secondary" type="button" onClick={onNewList}>
+            Nieuw...
           </button>
           <button
             className="btn secondary"
@@ -67,23 +58,8 @@ export default function StartControls({
           </button>
         </div>
       </div>
-      <div className="question-picker">
-        {PRESET_QUESTION_COUNTS.map((count) => (
-          <button
-            key={count}
-            className={`btn choice ${
-              questionsPerRound === count ? "active" : ""
-            }`}
-            onClick={() => onPresetSelect(count)}
-            type="button"
-            disabled={continueUntilCorrect}
-          >
-            {count}
-          </button>
-        ))}
-      </div>
-      <div className="custom-question-picker">
-        <label htmlFor="custom-count">Eigen aantal vragen</label>
+      <div className="custom-question-picker compact">
+        <label htmlFor="custom-count">Vragen per ronde:</label>
         <input
           id="custom-count"
           type="number"
@@ -94,14 +70,6 @@ export default function StartControls({
           placeholder="Bijv. 12"
           disabled={continueUntilCorrect}
         />
-        <button
-          className="btn secondary"
-          onClick={onCustomApply}
-          type="button"
-          disabled={continueUntilCorrect}
-        >
-          Gebruik aantal
-        </button>
       </div>
       <label className="checkbox-label">
         <input
@@ -111,9 +79,8 @@ export default function StartControls({
             onContinueUntilCorrectChange(event.target.checked)
           }
         />
-        Ga door tot alles goed is
+        Of ga door tot alles ten minste één keer goed is
       </label>
-      <p className="help">Nu ingesteld: {questionsPerRound} vragen per ronde.</p>
       <button className="btn primary" onClick={onStart}>
         Start dictee
       </button>

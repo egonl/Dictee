@@ -207,6 +207,10 @@ strong {
   margin-bottom: 8px;
 }
 
+.custom-question-picker.compact {
+  margin: 12px 0 8px;
+}
+
 .custom-question-picker label {
   font-weight: 700;
   color: var(--ink);

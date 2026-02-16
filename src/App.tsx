@@ -205,7 +205,9 @@ function App() {
   const [questionsPerRound, setQuestionsPerRound] = useState(
     DEFAULT_QUESTION_COUNT,
   );
-  const [customQuestionCount, setCustomQuestionCount] = useState("");
+  const [customQuestionCount, setCustomQuestionCount] = useState(
+    String(DEFAULT_QUESTION_COUNT),
+  );
   const [continueUntilCorrect, setContinueUntilCorrect] = useState(false);
   const [roundMistakes, setRoundMistakes] = useState<MistakeEntry[]>([]);
   const [showMistakes, setShowMistakes] = useState(false);
@@ -342,7 +344,9 @@ function App() {
   const handleWordListChange = (key: string) => {
     setActiveWordListKey(key);
     const listCount = allLists[key]?.entries.length ?? activeWordList.length;
-    setQuestionsPerRound(Math.max(listCount, 1));
+    const nextCount = Math.max(listCount, 1);
+    setQuestionsPerRound(nextCount);
+    setCustomQuestionCount(String(nextCount));
     goToStartScreen();
   };
   const handleDeleteList = () => {
@@ -445,13 +449,16 @@ function App() {
     });
 
     setActiveWordListKey(targetKey);
-    setQuestionsPerRound(Math.max(entries.length, 1));
+    const nextCount = Math.max(entries.length, 1);
+    setQuestionsPerRound(nextCount);
+    setCustomQuestionCount(String(nextCount));
     resetRoundUi();
     pendingRef.current = [];
     closeListDialog();
   };
-  const applyCustomQuestionCount = () => {
-    const parsed = Number.parseInt(customQuestionCount, 10);
+  const handleQuestionCountChange = (value: string) => {
+    setCustomQuestionCount(value);
+    const parsed = Number.parseInt(value, 10);
     if (Number.isNaN(parsed)) {
       return;
     }
@@ -550,13 +557,10 @@ function App() {
           <StartControls
             listNames={listNames}
             activeWordListKey={activeWordListKey}
-            questionsPerRound={questionsPerRound}
             customQuestionCount={customQuestionCount}
             continueUntilCorrect={continueUntilCorrect}
             onListChange={handleWordListChange}
-            onPresetSelect={setQuestionsPerRound}
-            onCustomChange={setCustomQuestionCount}
-            onCustomApply={applyCustomQuestionCount}
+            onCustomChange={handleQuestionCountChange}
             onContinueUntilCorrectChange={setContinueUntilCorrect}
             onStart={startRound}
             onNewList={openNewListDialog}
