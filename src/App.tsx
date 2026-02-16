@@ -10,13 +10,24 @@ import StatsPanel from "./components/StatsPanel";
 import celebrationGif from "./assets/thumbs-up.gif";
 import { WORD_LISTS, type WordListDefinition } from "./data/wordLists";
 import type { LetterFeedback, MistakeEntry } from "./types";
+type MistakeCount = Record<string, number>;
+
+const MIN_QUESTION_COUNT = 1;
+const MAX_QUESTION_COUNT = 100;
 const DEFAULT_LIST_NAME = Object.keys(WORD_LISTS)[0];
 const DEFAULT_QUESTION_COUNT = Math.max(
-  1,
+  MIN_QUESTION_COUNT,
   WORD_LISTS[DEFAULT_LIST_NAME]?.entries.length ?? 1,
 );
 const LOCALE = "nl-NL";
 const USER_LISTS_STORAGE_KEY = "dictee:userLists";
+const clampQuestionCount = (value: number) =>
+  Math.min(MAX_QUESTION_COUNT, Math.max(MIN_QUESTION_COUNT, value));
+const parseListEntries = (value: string) =>
+  value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
 const loadStoredLists = (): Record<string, WordListDefinition> => {
   if (typeof window === "undefined") {
     return {};
@@ -208,7 +219,7 @@ function App() {
   const [roundCorrect, setRoundCorrect] = useState(0);
   const [totalCorrect, setTotalCorrect] = useState(0);
   const [totalQuestions, setTotalQuestions] = useState(0);
-  const [mistakeCount, setMistakeCount] = useState<Record<string, number>>({});
+  const [mistakeCount, setMistakeCount] = useState<MistakeCount>({});
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [lastFeedback, setLastFeedback] = useState<LetterFeedback[]>([]);
   const [lastResultCorrect, setLastResultCorrect] = useState<boolean | null>(
@@ -264,12 +275,13 @@ function App() {
   const speechSupported =
     typeof window !== "undefined" && "speechSynthesis" in window;
   // Totaalpercentage over alle gespeelde vragen.
-  const accuracy = useMemo(() => {
-    if (totalQuestions === 0) {
-      return 0;
-    }
-    return Math.round((totalCorrect / totalQuestions) * 100);
-  }, [totalCorrect, totalQuestions]);
+  const accuracy = useMemo(
+    () =>
+      totalQuestions === 0
+        ? 0
+        : Math.round((totalCorrect / totalQuestions) * 100),
+    [totalCorrect, totalQuestions],
+  );
   const speakText = (text: string, rate: number, pitch: number) => {
     if (!speechSupported) {
       return;
@@ -304,7 +316,7 @@ function App() {
     setRoundMistakes([]);
     setShowMistakes(false);
   };
-  const drawNextWord = (currentMistakes: Record<string, number>) => {
+  const drawNextWord = (currentMistakes: MistakeCount) => {
     let pool = pendingRef.current;
     if (pool.length === 0) {
       const mistakeWords = Object.entries(currentMistakes)
@@ -326,7 +338,7 @@ function App() {
     pendingRef.current = rest;
     return nextWord ?? (continueUntilCorrect ? null : activeWordList[0]);
   };
-  const startRound = (baseMistakes?: Record<string, number>) => {
+  const startRound = (baseMistakes?: MistakeCount) => {
     remainingWordsRef.current = new Set(activeWordList);
     setRemainingCount(activeWordList.length);
     const firstWord = drawNextWord(baseMistakes ?? mistakeCount);
@@ -366,7 +378,7 @@ function App() {
   const handleWordListChange = (key: string) => {
     setActiveWordListKey(key);
     const listCount = allLists[key]?.entries.length ?? activeWordList.length;
-    const nextCount = Math.max(listCount, 1);
+    const nextCount = clampQuestionCount(listCount);
     setQuestionsPerRound(nextCount);
     setCustomQuestionCount(String(nextCount));
     goToStartScreen();
@@ -440,10 +452,7 @@ function App() {
       return;
     }
 
-    const entries = newListBody
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0);
+    const entries = parseListEntries(newListBody);
     const gifUrl = newListGifUrl.trim();
 
     if (entries.length === 0) {
@@ -471,7 +480,7 @@ function App() {
     });
 
     setActiveWordListKey(targetKey);
-    const nextCount = Math.max(entries.length, 1);
+    const nextCount = clampQuestionCount(entries.length);
     setQuestionsPerRound(nextCount);
     setCustomQuestionCount(String(nextCount));
     resetRoundUi();
@@ -484,7 +493,7 @@ function App() {
     if (Number.isNaN(parsed)) {
       return;
     }
-    const clamped = Math.min(100, Math.max(1, parsed));
+    const clamped = clampQuestionCount(parsed);
     setQuestionsPerRound(clamped);
   };
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -492,19 +501,20 @@ function App() {
     if (!currentWord) {
       return;
     }
+    const trimmedAnswer = answer.trim();
     const correct = isCorrectAnswer(answer, currentWord);
     const feedback = buildFeedback(answer, currentWord);
     const { correctLetters, totalLetters } = countLetterScore(feedback);
     setLastFeedback(feedback);
     setLastResultCorrect(correct);
-    setLastAttempt(answer.trim());
+    setLastAttempt(trimmedAnswer);
     setLastCorrectWord(currentWord);
     setTotalQuestions((previous) => previous + totalLetters);
     setTotalCorrect((previous) => previous + correctLetters);
     if (!correct) {
       setRoundMistakes((previous) => [
         ...previous,
-        { word: currentWord, answer: answer.trim(), feedback },
+        { word: currentWord, answer: trimmedAnswer, feedback },
       ]);
     }
     // Snapshot wordt meteen gebruikt voor de volgende gewogen selectie.
