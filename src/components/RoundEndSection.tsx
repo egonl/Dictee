@@ -32,7 +32,7 @@ export default function RoundEndSection({
       <p className="mascot-text">Goed gedaan!</p>
       <h2>Ronde klaar!</h2>
       <p>
-        Je had {roundCorrect} van de {questionsPerRound} goed.
+        Je had {roundCorrect} van de {questionsPerRound} helemaal foutloos.
       </p>
       {roundMistakes.length > 0 && (
         <>

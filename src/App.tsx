@@ -146,6 +146,20 @@ const buildFeedback = (answer: string, target: string): LetterFeedback[] => {
   feedback.reverse();
   return feedback;
 };
+const countLetterScore = (feedback: LetterFeedback[]) => {
+  let correctLetters = 0;
+  let totalLetters = 0;
+  for (const item of feedback) {
+    if (item.state === "extra") {
+      continue;
+    }
+    totalLetters += 1;
+    if (item.state === "correct") {
+      correctLetters += 1;
+    }
+  }
+  return { correctLetters, totalLetters };
+};
 const pickDutchFemaleVoice = (voices: SpeechSynthesisVoice[]) => {
   // Browservoices verschillen per OS/browser. We scoren op NL + naam-hints.
   const dutchVoices = voices.filter((voice) =>
@@ -472,11 +486,13 @@ function App() {
     }
     const correct = isCorrectAnswer(answer, currentWord);
     const feedback = buildFeedback(answer, currentWord);
+    const { correctLetters, totalLetters } = countLetterScore(feedback);
     setLastFeedback(feedback);
     setLastResultCorrect(correct);
     setLastAttempt(answer.trim());
     setLastCorrectWord(currentWord);
-    setTotalQuestions((previous) => previous + 1);
+    setTotalQuestions((previous) => previous + totalLetters);
+    setTotalCorrect((previous) => previous + correctLetters);
     if (!correct) {
       setRoundMistakes((previous) => [
         ...previous,
@@ -487,7 +503,6 @@ function App() {
     let nextMistakeCount = mistakeCount;
     if (correct) {
       setRoundCorrect((previous) => previous + 1);
-      setTotalCorrect((previous) => previous + 1);
       nextMistakeCount = { ...mistakeCount };
       delete nextMistakeCount[currentWord];
       if (continueUntilCorrect) {
